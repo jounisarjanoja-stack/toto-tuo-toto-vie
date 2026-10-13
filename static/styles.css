@@ -30,6 +30,18 @@ body {
 
 .top, main { width: min(1080px, 100%); margin: 0 auto; }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.8rem, 2vw, 1.4rem);
+}
+
+.mark {
+  width: clamp(7.2rem, 24vw, 11.5rem);
+  height: auto;
+  flex: none;
+}
+
 .kicker {
   margin: 0 0 0.2rem;
   letter-spacing: 0.14em;
