@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Toto tuo Toto vie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="top">
+    <p class="kicker">Veikkaus</p>
+    <h1>Toto tuo Toto vie</h1>
+    <p class="lede">Kuka voittaa, ja kuka voittaa useammin kuin peliosuus juuri nyt sanoo. Rivi kootaan budjetin sisään.</p>
+    <p id="meta" class="meta">Haetaan lähtöjä…</p>
+  </header>
+
+  <main>
+    <div class="controls">
+      <div class="segment games" id="games" role="group" aria-label="Peli">
+        <button type="button" data-game="T4">Toto4</button>
+        <button type="button" data-game="T5">Toto5</button>
+        <button type="button" data-game="TRO">Troikka</button>
+        <button type="button" data-game="KAK">Kaksari</button>
+        <button type="button" data-game="QRT">Quarte+</button>
+        <button type="button" data-game="QNT">Quinte+</button>
+        <button type="button" data-game="T64">Toto64</button>
+        <button type="button" data-game="T65">Toto65</button>
+        <button type="button" data-game="T75" aria-pressed="true">Toto75</button>
+        <button type="button" data-game="T86">Toto86</button>
+      </div>
+      <div class="segment" id="profiles" role="group" aria-label="Rivin luonne">
+        <button type="button" data-profile="turvallinen" aria-pressed="true">Turvallinen</button>
+        <button type="button" data-profile="tasapainoinen" aria-pressed="false">Tasapainoinen</button>
+        <button type="button" data-profile="rohkea" aria-pressed="false">Rohkea</button>
+      </div>
+      <div class="segment" id="budgets" role="group" aria-label="Budjetti">
+        <button type="button" data-budget="5">5 €</button>
+        <button type="button" data-budget="10" aria-pressed="true">10 €</button>
+        <button type="button" data-budget="20">20 €</button>
+        <button type="button" data-budget="50">50 €</button>
+        <button type="button" data-budget="100">100 €</button>
+      </div>
+      <label class="field">Rivin hinta
+        <select id="stake"></select>
+      </label>
+      <label class="field" id="card-field">Ravit
+        <select id="card"></select>
+      </label>
+      <label class="field" id="race-field" hidden>Lähtö
+        <select id="race"></select>
+      </label>
+      <button id="reload" class="reload" type="button">Päivitä</button>
+    </div>
+    <p id="profile-note" class="profile-note"></p>
+    <div id="spotlight" class="spotlight"></div>
+    <section id="slip" class="slip" aria-live="polite"></section>
+    <div id="races" class="races"></div>
+
+    <details class="method">
+      <summary>Miten arvio ja rivi syntyvät</summary>
+      <div class="method-body">
+        <p>Voittotodennäköisyys lasketaan neljästä eri painotuksesta. Vire katsoo viime starttien sijoituksia ja kilometriaikoja. Luokka katsoo voittoprosenttia, ansioita ja ennätystä. Ohjastaja katsoo ohjastajan voittoprosenttia, yhteisiä startteja ja hevosen vuoden virettä. Lähtö katsoo rataa, tasoitusta ja kenkiä. Peliosuus ei ole mukana tässä laskussa, jotta eroa markkinaan voi lukea suoraan.</p>
+        <p>Jokaisen lähdön prosentit summataan sataan. Ero on mallin prosentti miinus tämän pelin peliosuus. Alipelattu tarkoittaa, että malli antaa hevoselle selvästi isomman voiton mahdollisuuden kuin peliosuus. Ylipelattu tarkoittaa päinvastaista: todennäköisin voittaja voi silti olla huono pelikohde.</p>
+        <p>Varmuus kokoaa voittotodennäköisyyden, laskurien yksimielisyyden, markkinan vahvistuksen, lähdön sopivuuden ja vireen. Siitä vähennetään laukkariski ja riippuvuus juoksunkulusta. Varma-merkki tulee vain, kun luku on vähintään 78, hevonen on selvä ykkönen ja sitä ei ole ylipelattu.</p>
+        <p>Pois jäänyt hevonen pudotetaan prosenteista ja rivistä. Jäljelle jäävien osuudet lasketaan uudelleen niin, että ne summautuvat sataan.</p>
+        <p>Toto4, Toto5, Toto64, Toto65, Toto75 ja Toto86 ovat voittajarivejä: yksi hevonen jokaisesta pelin lähdöstä. Kaksari on kahden ensimmäisen oikea järjestys yhdessä lähdössä, troikka kolmen, Quarte+ neljän ja Quinte+ viiden. Järjestys lasketaan voittotodennäköisyyksistä. Laatikko pelaa valittujen hevosten kaikki järjestykset, kun ne mahtuvat budjettiin. Muuten rivi on todennäköisimmät yksittäiset järjestykset.</p>
+        <p>Rivi valitsee hevoset profiilin järjestyksessä niin, että koko rivin osuminen on budjetin sisällä mahdollisimman todennäköistä. Turvallinen järjestää pelkän voittotodennäköisyyden mukaan. Tasapainoinen nostaa alipelattuja. Rohkea ei pankita ylipelattua suosikkia. Luvut eivät ole vuosien tuloksilla opetettu malli, koska rajapinta antaa kunkin hevosen viime startit ja tilastot, ei koko historiallista aineistoa.</p>
+      </div>
+    </details>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
