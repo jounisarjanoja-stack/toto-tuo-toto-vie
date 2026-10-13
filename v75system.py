@@ -1,10 +1,12 @@
 """Rivi budjetin sisään.
 
-Voittajapeleissä jokainen lähtö on rankingin etuliite. Kaksarissa ja
-troikassa laatikko on samojen hevosten kaikki järjestykset. Järjestys
-riippuu profiilista, rivimäärä budjetista.
+Voittajapeleissä jokainen lähtö on rankingin etuliite. Järjestyspeleissä
+laatikko on samojen hevosten kaikki järjestykset. Jos laatikko ei mahdu
+budjettiin, riviin otetaan todennäköisimmät yksittäiset järjestykset
+ilman että kaikki yhdistelmät pidetään muistissa.
 """
 
+import heapq
 import itertools
 
 BUDGETS = (5, 10, 20, 50, 100)
@@ -181,6 +183,59 @@ def _box_rows(count, places):
     return rows
 
 
+def _completion_bound(prob, remaining, used, ranked, need):
+    """Yläraja: jäljellä olevista isoimmat todennäköisyydet järjestyksessä."""
+    if need <= 0:
+        return prob
+    chance = prob
+    rest = remaining
+    taken = 0
+    for number, share in ranked:
+        if number in used or share <= 0:
+            continue
+        if rest <= 1e-12:
+            return 0.0
+        chance *= share / rest
+        rest -= share
+        taken += 1
+        if taken == need:
+            return chance
+    return 0.0
+
+
+def _top_orders(numbers, probs, places, limit):
+    """Todennäköisimmät järjestykset. Ei rakenna koko kombinatoriikkaa."""
+    if limit <= 0:
+        return []
+    ranked = sorted(
+        ((number, probs.get(number) or 0.0) for number in numbers),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    bound = _completion_bound(1.0, 1.0, (), ranked, places)
+    heap = [(-bound, 0, 1.0, 1.0, ())]
+    found = []
+    counter = 1
+    while heap and len(found) < limit and counter < 100000:
+        neg, _seq, prob, remaining, order = heapq.heappop(heap)
+        if len(order) == places:
+            found.append((-neg, order))
+            continue
+        used = set(order)
+        need = places - len(order) - 1
+        for number, share in ranked:
+            if number in used or share <= 0 or remaining <= 1e-12:
+                continue
+            chance = prob * (share / remaining)
+            rest = remaining - share
+            nxt = chance if need == 0 else _completion_bound(chance, rest, used | {number}, ranked, need)
+            if nxt <= 0:
+                continue
+            heapq.heappush(heap, (-nxt, counter, chance, rest, order + (number,)))
+            counter += 1
+    return found
+
+
 def build_ordered(race, profile, budget, stake, places):
     """Yhden lähdön kaksari tai troikka. Laatikko, jos se mahtuu budjettiin."""
 
@@ -266,11 +321,7 @@ def build_ordered(race, profile, budget, stake, places):
         rows = _box_rows(box_size, places)
         return finish(picks, rows, hit, True, [], f"{box_size} hevosta, kaikki {rows} järjestystä")
 
-    ranked = []
-    for order in itertools.permutations((horse["number"] for horse in ordered), places):
-        ranked.append((_harville(order, probs), order))
-    ranked.sort(key=lambda item: item[0], reverse=True)
-    ranked = ranked[:max_rows]
+    ranked = _top_orders([horse["number"] for horse in ordered], probs, places, max_rows)
     if not ranked:
         return empty("Riviä ei voitu koota.")
     lines = []
