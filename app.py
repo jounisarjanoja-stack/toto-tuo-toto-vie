@@ -25,6 +25,7 @@ FILES = {
     "/": "index.html",
     "/index.html": "index.html",
     "/styles.css": "styles.css",
+    "/mobile.css": "mobile.css",
     "/app.js": "app.js",
     "/sulky.svg": "sulky.svg",
 }

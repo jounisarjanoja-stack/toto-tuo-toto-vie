@@ -137,6 +137,13 @@ function renderGames() {
     button.setAttribute("aria-pressed", payload.game?.id === button.dataset.game ? "true" : "false");
   });
   if (payload.game?.id) game = payload.game.id;
+  revealCurrentGame();
+}
+
+function revealCurrentGame() {
+  if (document.documentElement.dataset.device !== "mobile") return;
+  const current = document.querySelector('#games button[aria-pressed="true"]');
+  if (current) current.scrollIntoView({ inline: "center", block: "nearest" });
 }
 
 function renderRaceSelect() {
@@ -505,4 +512,5 @@ raceSelect.addEventListener("change", () => {
   load(false);
 });
 reloadButton.addEventListener("click", () => load(true));
+document.documentElement.addEventListener("devicechange", revealCurrentGame);
 load(false);
