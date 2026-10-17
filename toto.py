@@ -1,7 +1,8 @@
 """Veikkauksen totokortti: lähdöt, hevoset ja peliosuudet.
 
-Pelit ovat voittajarivejä (Toto4, Toto5, Toto64, Toto65, Toto75, Toto86)
-tai yhden lähdön järjestyspelejä (Kaksari, Troikka).
+Pelit ovat voittajarivejä (Toto4, Toto5, Toto64, Toto65, Toto75, Toto85,
+Toto86 ja kahden lähdön Päivän Duo), yhden lähdön voittaja- ja sijapelejä
+tai yhden lähdön järjestyspelejä (Kaksari, Troikka, Quarte+, Quinte+).
 """
 
 import gzip
@@ -23,15 +24,19 @@ _cache = {}
 
 # Järjestys on valikon järjestys. Toto75 pysyy mukana, vaikka sitä ei laajennuksessa nimetty.
 GAMES = (
+    {"id": "VOI", "name": "Voittaja", "kind": "winners", "pickRace": True},
+    {"id": "SIJ", "name": "Sija", "kind": "place", "pickRace": True, "places": 3},
     {"id": "T4", "name": "Toto4", "kind": "winners"},
     {"id": "T5", "name": "Toto5", "kind": "winners"},
     {"id": "TRO", "name": "Troikka", "kind": "ordered", "places": 3},
     {"id": "KAK", "name": "Kaksari", "kind": "ordered", "places": 2},
+    {"id": "DUO", "name": "Päivän Duo", "kind": "winners"},
     {"id": "QRT", "name": "Quarte+", "kind": "ordered", "places": 4},
     {"id": "QNT", "name": "Quinte+", "kind": "ordered", "places": 5},
     {"id": "T64", "name": "Toto64", "kind": "winners"},
     {"id": "T65", "name": "Toto65", "kind": "winners"},
     {"id": "T75", "name": "Toto75", "kind": "winners"},
+    {"id": "T85", "name": "Toto85", "kind": "winners"},
     {"id": "T86", "name": "Toto86", "kind": "winners"},
 )
 GAME_BY_ID = {game["id"]: game for game in GAMES}
@@ -115,6 +120,72 @@ def _choose(cards, game_id, card_id):
             if card.get("cardId") == card_id:
                 return card
     return pool[0]
+
+
+def _pick_race(game_info):
+    return bool(game_info.get("pickRace")) or game_info["kind"] == "ordered"
+
+
+def _odds_style(odds):
+    rows = odds.get("odds") or []
+    if not rows:
+        return "empty"
+    row = rows[0]
+    if row.get("runnerNumber1") is not None and row.get("runnerNumber2") is not None and row.get("runnerNumber3") is None:
+        return "duo"
+    if row.get("percentage") is not None:
+        return "percent"
+    if row.get("runnerNumber") is not None:
+        return "amount"
+    return "empty"
+
+
+def _amount_shares(odds):
+    rows = odds.get("odds") or []
+    net = odds.get("netSales") or sum((row.get("amount") or 0) for row in rows)
+    shares = {}
+    if not net:
+        return shares
+    for row in rows:
+        number = row.get("runnerNumber")
+        if number is None:
+            continue
+        shares[number] = (row.get("amount") or 0) / net
+    return shares
+
+
+def _amount_prices(rows):
+    prices = {}
+    for row in rows:
+        number = row.get("runnerNumber")
+        if number is None:
+            continue
+        low = row.get("minProbable")
+        high = row.get("maxProbable")
+        if low and high:
+            prices[number] = (low + high) / 200
+        elif row.get("probable"):
+            prices[number] = row["probable"] / 100
+        elif row.get("winProbable"):
+            prices[number] = row["winProbable"] / 100
+    return prices
+
+
+def _duo_shares(odds):
+    """Hevosen osuus Päivän Duon vaihdosta. Listalla näkymätön hevonen jää pois."""
+    rows = odds.get("odds") or []
+    net = odds.get("netSales") or 0
+    legs = [{}, {}]
+    if not net:
+        return legs
+    for row in rows:
+        amount = row.get("amount") or 0
+        for index, key in enumerate(("runnerNumber1", "runnerNumber2")):
+            number = row.get(key)
+            if number is None:
+                continue
+            legs[index][number] = legs[index].get(number, 0.0) + amount / net
+    return legs
 
 
 def _race_number(pool):
@@ -347,10 +418,14 @@ def load(card_id=None, game=None, race_number=None, refresh=False):
                 voi[race_id] = None
 
     places = game_info.get("places") or 1
+    style = _odds_style(odds)
     if game_info["kind"] == "ordered":
         first_shares, combos = _combo_rows(odds, places)
     else:
         first_shares, combos = {}, []
+    duo_shares = _duo_shares(odds) if style == "duo" and game_info["kind"] != "ordered" else []
+    amount_shares = _amount_shares(odds) if style == "amount" else {}
+    amount_prices = _amount_prices(odds.get("odds") or []) if style == "amount" else {}
     shares, _prices = _market(odds)
     scratched_odds = {}
     for row in (odds.get("odds") or []):
@@ -359,11 +434,21 @@ def load(card_id=None, game=None, race_number=None, refresh=False):
     built_races = []
     for index, race in legs:
         voi_odds = voi.get(race["raceId"]) or {}
-        _share, prices = _market(voi_odds)
+        _share, win_prices = _market(voi_odds)
         out = scratched_odds.get(race["raceId"], set())
+        sales_cents = int((voi_odds or {}).get("netSales") or 0)
+        prices = win_prices
         if game_info["kind"] == "ordered":
             race_shares = dict(first_shares)
             race_combos = combos
+        elif duo_shares:
+            race_combos = []
+            race_shares = duo_shares[index - 1] if index - 1 < len(duo_shares) else {}
+        elif amount_shares or style == "amount":
+            race_combos = []
+            race_shares = dict(amount_shares)
+            prices = amount_prices
+            sales_cents = int(odds.get("netSales") or selected.get("netSales") or 0)
         else:
             race_combos = []
             race_shares = {
@@ -389,7 +474,7 @@ def load(card_id=None, game=None, race_number=None, refresh=False):
                 "firstPrize": int(race.get("firstPrize") or 0),
                 "monte": bool(race.get("monte")),
                 "startMs": race.get("startTime"),
-                "salesCents": int((voi_odds or {}).get("netSales") or 0),
+                "salesCents": sales_cents,
                 "runners": _runners(runners.get(race["raceId"]) or [], out),
                 "market": race_shares,
                 "odds": prices,
@@ -423,6 +508,7 @@ def load(card_id=None, game=None, race_number=None, refresh=False):
             "name": game_info["name"],
             "kind": game_info["kind"],
             "places": game_info.get("places") or 0,
+            "pickRace": _pick_race(game_info),
         },
         "games": [
             {"id": item["id"], "name": item["name"], "open": item["id"] in open_types}
@@ -448,7 +534,7 @@ def load(card_id=None, game=None, race_number=None, refresh=False):
         "races": built_races,
     }
     stored = (game_id, card_id or 0, race_number or 0)
-    resolved = (game_id, cid, _race_number(selected) if game_info["kind"] == "ordered" else 0)
+    resolved = (game_id, cid, _race_number(selected) if _pick_race(game_info) else 0)
     with _lock:
         packed = {"loaded": time.time(), "value": payload}
         _cache[stored] = packed

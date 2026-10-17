@@ -203,7 +203,56 @@ def _spotlight(races):
     return [pack(race, horse) for race, horse in picked]
 
 
+def _in_the_money(probs, places):
+    """Todennäköisyys olla sijoilla 1..places. Summa on paikkojen määrä."""
+    numbers = [number for number, prob in probs.items() if prob > 0]
+    slots = min(places, len(numbers))
+    chance = {number: 0.0 for number in probs}
+    if slots <= 0:
+        return chance
+
+    def walk(used, used_prob, path_prob, depth):
+        if depth == slots or used_prob >= 1 - 1e-12:
+            return
+        for number in numbers:
+            if number in used:
+                continue
+            step = path_prob * probs[number] / (1 - used_prob)
+            chance[number] += step
+            used.add(number)
+            walk(used, used_prob + probs[number], step, depth + 1)
+            used.remove(number)
+
+    walk(set(), 0.0, 1.0, 0)
+    return chance
+
+
+def _apply_place(horses, market, places):
+    """Sijapelin malli on sijoittumistodennäköisyys jaettuna sijojen määrällä, jotta se on samassa mitassa kuin potin osuus."""
+    market = market or {}
+    active = [horse for horse in horses if horse.get("ai") and not horse.get("scratched")]
+    chances = _in_the_money({horse["number"]: horse["ai"] for horse in active}, places)
+    for horse in active:
+        chance = chances.get(horse["number"], 0.0)
+        fair = chance / places if places else 0.0
+        share = market.get(horse["number"])
+        horse["place"] = chance
+        horse["ai"] = fair
+        horse["market"] = share
+        horse["edge"] = None if share is None else fair - share
+        horse["label"] = v75model._edge_label(fair, share)
+    horses.sort(key=lambda horse: (bool(horse.get("scratched")), -(horse.get("ai") or 0)))
+    priced = [horse for horse in active if horse.get("market") is not None]
+    favorite = max(priced, key=lambda horse: horse["market"])["number"] if priced else None
+    likely = max(active, key=lambda horse: horse["ai"])["number"] if active else None
+    for horse in horses:
+        horse["favorite"] = horse.get("number") == favorite
+        horse["likely"] = horse.get("number") == likely and not horse.get("scratched")
+
+
 def _hit_label(game, legs):
+    if game["kind"] == "place":
+        return "Sijat mukana"
     if game["kind"] == "ordered":
         places = game.get("places") or 2
         return {
@@ -212,6 +261,10 @@ def _hit_label(game, legs):
             4: "Oikea neljän kärki mukana",
             5: "Oikea viiden kärki mukana",
         }.get(places, "Oikea järjestys mukana")
+    if legs == 1:
+        return "Voittaja mukana"
+    if legs == 2:
+        return "Molemmat voittajat mukana"
     word = COUNT_WORDS.get(legs, str(legs))
     return f"Kaikki {word} voittajaa mukana"
 
@@ -232,7 +285,11 @@ def build(card_id=None, refresh=False, stake=0.10, game=None, race_number=None):
     races = []
     for race in raw["races"]:
         odds = race.get("odds") if (race.get("salesCents") or 0) >= 5000 else {}
-        horses = v75model.analyze_race(race["runners"], race, race.get("market"), odds)
+        if raw["game"]["kind"] == "place":
+            horses = v75model.analyze_race(race["runners"], race, None, odds)
+            _apply_place(horses, race.get("market"), raw["game"].get("places") or 3)
+        else:
+            horses = v75model.analyze_race(race["runners"], race, race.get("market"), odds)
         base = race.get("distance") or 0
         distances = [horse.get("distance") or base for horse in race["runners"] if horse.get("distance")]
         if distances:
@@ -269,6 +326,7 @@ def build(card_id=None, refresh=False, stake=0.10, game=None, race_number=None):
             "name": game_info["name"],
             "kind": game_info["kind"],
             "places": game_info.get("places") or 0,
+            "pickRace": bool(game_info.get("pickRace")),
         },
         "games": [
             {"id": item["id"], "name": item["name"], "open": item["open"], "selected": item["id"] == game_info["id"]}

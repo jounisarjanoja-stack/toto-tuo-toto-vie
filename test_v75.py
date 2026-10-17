@@ -2,6 +2,8 @@
 
 import unittest
 
+import toto
+import v75
 import v75model
 import v75system
 
@@ -272,6 +274,40 @@ class SystemTest(unittest.TestCase):
         system = v75system.build_one(self.races(), "turvallinen", 0.02, 0.1)
         self.assertEqual(system["rows"], 0)
         self.assertTrue(system["notes"])
+
+    def test_place_chances_use_the_same_scale_as_the_pool(self):
+        horses = [
+            {"number": 1, "ai": 0.40, "scratched": False, "market": None, "label": "ei markkinaa"},
+            {"number": 2, "ai": 0.30, "scratched": False, "market": None, "label": "ei markkinaa"},
+            {"number": 3, "ai": 0.20, "scratched": False, "market": None, "label": "ei markkinaa"},
+            {"number": 4, "ai": 0.10, "scratched": False, "market": None, "label": "ei markkinaa"},
+        ]
+        chances = v75._in_the_money({horse["number"]: horse["ai"] for horse in horses}, 3)
+        self.assertAlmostEqual(sum(chances.values()), 3, places=6)
+        self.assertGreater(chances[1], chances[4])
+        v75._apply_place(horses, {1: 0.10, 2: 0.30, 3: 0.30, 4: 0.30}, 3)
+        self.assertAlmostEqual(sum(horse["ai"] for horse in horses), 1, places=6)
+        self.assertGreater(horses[0]["place"], horses[0]["ai"])
+        self.assertEqual(horses[0]["number"], 1)
+        self.assertEqual(horses[0]["label"], "alipelattu")
+
+    def test_single_winner_and_place_labels(self):
+        self.assertEqual(v75._hit_label({"kind": "winners"}, 1), "Voittaja mukana")
+        self.assertEqual(v75._hit_label({"kind": "place"}, 1), "Sijat mukana")
+        self.assertEqual(v75._hit_label({"kind": "winners"}, 8), "Kaikki kahdeksan voittajaa mukana")
+
+    def test_duo_share_ignores_horses_missing_from_the_price_list(self):
+        shares = toto._duo_shares({
+            "netSales": 100,
+            "odds": [
+                {"runnerNumber1": 1, "runnerNumber2": 4, "amount": 60},
+                {"runnerNumber1": 2, "runnerNumber2": 4, "amount": 40},
+            ],
+        })
+        self.assertAlmostEqual(shares[0][1], 0.6)
+        self.assertAlmostEqual(shares[0][2], 0.4)
+        self.assertAlmostEqual(shares[1][4], 1)
+        self.assertNotIn(3, shares[0])
 
 
 if __name__ == "__main__":

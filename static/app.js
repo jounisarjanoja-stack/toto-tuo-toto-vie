@@ -109,10 +109,14 @@ function pickedSet(system) {
   return set;
 }
 
+function picksRace() {
+  return payload?.game?.kind === "ordered" || payload?.game?.pickRace;
+}
+
 function renderMeta() {
   const card = payload.card;
   const pool = payload.pool;
-  const raceBit = payload.game?.kind === "ordered"
+  const raceBit = picksRace()
     ? `lähtö ${payload.races[0]?.number ?? ""}`
     : `${payload.races.length} lähtöä`;
   const bits = [payload.game?.name, card.track, card.dateText, card.clock ? `klo ${card.clock}` : "", raceBit];
@@ -136,7 +140,7 @@ function renderGames() {
 }
 
 function renderRaceSelect() {
-  const ordered = payload.game?.kind === "ordered";
+  const ordered = picksRace();
   raceField.hidden = !ordered;
   raceSelect.replaceChildren();
   (payload.raceOptions || []).forEach((option) => {
@@ -298,7 +302,10 @@ function renderDetail(horse) {
     bits.push(`ohjastaja ${horse.driverWins} voittoa / ${horse.driverStarts} starttia`);
   }
   if (horse.shoes) bits.push(horse.shoes);
-  if (horse.odds) bits.push(`voittokerroin ${String(horse.odds).replace(".", ",")}`);
+  if (horse.odds) {
+    const priceName = payload.game?.kind === "place" ? "sijakerroin" : "voittokerroin";
+    bits.push(`${priceName} ${String(horse.odds).replace(".", ",")}`);
+  }
   if (bits.length) detail.append(el("p", "quiet", bits.join(" · ")));
 
   if (horse.gallop || horse.trip) {
@@ -395,7 +402,7 @@ function renderRaces() {
     const head = el("div", "race-head");
     const prize = race.prize ? ` · ${euros(race.prize)}` : "";
     const gameName = payload.game?.name || "Toto";
-    const kicker = payload.game?.kind === "ordered"
+    const kicker = picksRace()
       ? `${gameName} · lähtö ${race.number}`
       : `${gameName} ${race.leg} · lähtö ${race.number}`;
     head.append(el("p", "race-kicker", kicker));
@@ -410,7 +417,8 @@ function renderRaces() {
     }
     const likely = race.horses.find((horse) => horse.likely && horse.label === "ylipelattu");
     if (likely) {
-      head.append(el("p", "race-title", `${likely.number} ${likely.name} on todennäköisin voittaja ja silti ylipelattu.`));
+      const role = payload.game?.kind === "place" ? "todennäköisin sijalle" : "todennäköisin voittaja";
+      head.append(el("p", "race-title", `${likely.number} ${likely.name} on ${role} ja silti ylipelattu.`));
     }
     section.append(head);
 

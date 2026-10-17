@@ -25,15 +25,19 @@
   <main>
     <div class="controls">
       <div class="segment games" id="games" role="group" aria-label="Peli">
+        <button type="button" data-game="VOI">Voittaja</button>
+        <button type="button" data-game="SIJ">Sija</button>
         <button type="button" data-game="T4">Toto4</button>
         <button type="button" data-game="T5">Toto5</button>
         <button type="button" data-game="TRO">Troikka</button>
         <button type="button" data-game="KAK">Kaksari</button>
+        <button type="button" data-game="DUO">Päivän Duo</button>
         <button type="button" data-game="QRT">Quarte+</button>
         <button type="button" data-game="QNT">Quinte+</button>
         <button type="button" data-game="T64">Toto64</button>
         <button type="button" data-game="T65">Toto65</button>
         <button type="button" data-game="T75" aria-pressed="true">Toto75</button>
+        <button type="button" data-game="T85">Toto85</button>
         <button type="button" data-game="T86">Toto86</button>
       </div>
       <div class="segment" id="profiles" role="group" aria-label="Rivin luonne">
@@ -71,7 +75,7 @@
         <p>Jokaisen lähdön prosentit summataan sataan. Ero on mallin prosentti miinus tämän pelin peliosuus. Alipelattu tarkoittaa, että malli antaa hevoselle selvästi isomman voiton mahdollisuuden kuin peliosuus. Ylipelattu tarkoittaa päinvastaista: todennäköisin voittaja voi silti olla huono pelikohde.</p>
         <p>Varmuus kokoaa voittotodennäköisyyden, laskurien yksimielisyyden, markkinan vahvistuksen, lähdön sopivuuden ja vireen. Siitä vähennetään laukkariski ja riippuvuus juoksunkulusta. Varma-merkki tulee vain, kun luku on vähintään 78, hevonen on selvä ykkönen ja sitä ei ole ylipelattu.</p>
         <p>Pois jäänyt hevonen pudotetaan prosenteista ja rivistä. Jäljelle jäävien osuudet lasketaan uudelleen niin, että ne summautuvat sataan.</p>
-        <p>Toto4, Toto5, Toto64, Toto65, Toto75 ja Toto86 ovat voittajarivejä: yksi hevonen jokaisesta pelin lähdöstä. Kaksari on kahden ensimmäisen oikea järjestys yhdessä lähdössä, troikka kolmen, Quarte+ neljän ja Quinte+ viiden. Järjestys lasketaan voittotodennäköisyyksistä. Laatikko pelaa valittujen hevosten kaikki järjestykset, kun ne mahtuvat budjettiin. Muuten rivi on todennäköisimmät yksittäiset järjestykset.</p>
+        <p>Voittaja on yhden lähdön voittaja. Sija veikkaa hevosta kolmen joukkoon: mallin prosentti on sijoittumistodennäköisyys jaettuna kolmella, jotta sen voi lukea sijapotin osuutta vasten. Päivän Duo on kahden merkityn lähdön voittajat. Toto4, Toto5, Toto64, Toto65, Toto75, Toto85 ja Toto86 ovat voittajarivejä: yksi hevonen jokaisesta pelin lähdöstä. Kaksari on kahden ensimmäisen oikea järjestys yhdessä lähdössä, troikka kolmen, Quarte+ neljän ja Quinte+ viiden. Järjestys lasketaan voittotodennäköisyyksistä. Laatikko pelaa valittujen hevosten kaikki järjestykset, kun ne mahtuvat budjettiin. Muuten rivi on todennäköisimmät yksittäiset järjestykset.</p>
         <p>Rivi valitsee hevoset profiilin järjestyksessä niin, että koko rivin osuminen on budjetin sisällä mahdollisimman todennäköistä. Turvallinen järjestää pelkän voittotodennäköisyyden mukaan. Tasapainoinen nostaa alipelattuja. Rohkea ei pankita ylipelattua suosikkia. Luvut eivät ole vuosien tuloksilla opetettu malli, koska rajapinta antaa kunkin hevosen viime startit ja tilastot, ei koko historiallista aineistoa.</p>
       </div>
     </details>
